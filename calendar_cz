@@ -1,0 +1,62 @@
+Calendar_CZ = 
+VAR StartDate = DATE(YEAR(EDATE(TODAY(), -2)), MONTH(EDATE(TODAY(), -2)), 1)
+VAR EndDate   = EOMONTH(TODAY(), 2)
+RETURN
+ADDCOLUMNS(
+    CALENDAR(StartDate, EndDate),
+    "Rok", YEAR([Date]),
+    "Mesic", MONTH([Date]),
+    "Den", DAY([Date]),
+    "Weekday", FORMAT([Date], "dddd"),
+    /* NOVÝ sloupec podle dne v týdnu (1=Po ... 7=Ne) */
+    "HodnotaPodleDne",
+        VAR w = WEEKDAY([Date], 2)
+        RETURN
+            SWITCH(
+                TRUE(),
+                w = 1, 30,   -- pondělí
+                w = 2, 35,   -- úterý
+                w = 3, 40,   -- středa
+                w = 4, 45,   -- čtvrtek
+                w = 5, 50,   -- pátek
+                w = 6, 5,    -- sobota
+                w = 7, 10,   -- neděle
+                BLANK()
+            ),
+    "JePracovni",
+    VAR wd = WEEKDAY([Date], 2)  -- 1=pondeli ... 7=nedele
+    VAR Y = YEAR([Date])
+    /* Výpočet data Velikonoc (Meeus/Jones/Butcher) */
+    VAR a = MOD(Y, 19)
+    VAR b = QUOTIENT(Y, 100)
+    VAR c = MOD(Y, 100)
+    VAR d = QUOTIENT(b, 4)
+    VAR e = MOD(b, 4)
+    VAR f = QUOTIENT(b + 8, 25)
+    VAR g = QUOTIENT(b - f + 1, 3)
+    VAR h = MOD(19 * a + b - d - g + 15, 30)
+    VAR i = QUOTIENT(c, 4)
+    VAR k = MOD(c, 4)
+    VAR L = MOD(32 + 2*e + 2*i - h - k, 7)
+    VAR m = QUOTIENT(a + 11*h + 22*L, 451)
+    VAR EasterMonth = QUOTIENT(h + L - 7*m + 114, 31)
+    VAR EasterDay = MOD(h + L - 7*m + 114, 31) + 1
+    VAR Easter = DATE(Y, EasterMonth, EasterDay)
+    VAR GoodFriday = Easter - 2
+    VAR EasterMonday = Easter + 1
+    /* Fixní státní svátky v ČR */
+    VAR IsFixedHoliday =
+        (MONTH([Date]) = 1  && DAY([Date]) = 1 )  ||
+        (MONTH([Date]) = 5  && DAY([Date]) = 1 )  ||
+        (MONTH([Date]) = 5  && DAY([Date]) = 8 )  ||
+        (MONTH([Date]) = 7  && DAY([Date]) = 5 )  ||
+        (MONTH([Date]) = 7  && DAY([Date]) = 6 )  ||
+        (MONTH([Date]) = 9  && DAY([Date]) = 28)  ||
+        (MONTH([Date]) = 10 && DAY([Date]) = 28)  ||
+        (MONTH([Date]) = 11 && DAY([Date]) = 17)  ||
+        (MONTH([Date]) = 12 && DAY([Date]) = 24)  ||
+        (MONTH([Date]) = 12 && DAY([Date]) = 25)  ||
+        (MONTH([Date]) = 12 && DAY([Date]) = 26)
+    VAR IsHoliday = IsFixedHoliday || [Date] = GoodFriday || [Date] = EasterMonday
+    RETURN IF(wd <= 5 && NOT IsHoliday, "Ano", "Ne")
+)
