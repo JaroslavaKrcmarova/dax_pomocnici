@@ -8,21 +8,8 @@ ADDCOLUMNS(
     "Mesic", MONTH([Date]),
     "Den", DAY([Date]),
     "Weekday", FORMAT([Date], "dddd"),
-    /* NOVÝ sloupec podle dne v týdnu (1=Po ... 7=Ne) */
-    "HodnotaPodleDne",
-        VAR w = WEEKDAY([Date], 2)
-        RETURN
-            SWITCH(
-                TRUE(),
-                w = 1, 30,   -- pondělí
-                w = 2, 35,   -- úterý
-                w = 3, 40,   -- středa
-                w = 4, 45,   -- čtvrtek
-                w = 5, 50,   -- pátek
-                w = 6, 5,    -- sobota
-                w = 7, 10,   -- neděle
-                BLANK()
-            ),
+
+    /* JePracovni */
     "JePracovni",
     VAR wd = WEEKDAY([Date], 2)  -- 1=pondeli ... 7=nedele
     VAR Y = YEAR([Date])
@@ -58,5 +45,57 @@ ADDCOLUMNS(
         (MONTH([Date]) = 12 && DAY([Date]) = 25)  ||
         (MONTH([Date]) = 12 && DAY([Date]) = 26)
     VAR IsHoliday = IsFixedHoliday || [Date] = GoodFriday || [Date] = EasterMonday
-    RETURN IF(wd <= 5 && NOT IsHoliday, "Ano", "Ne")
+    RETURN IF(wd <= 5 && NOT IsHoliday, "Ano", "Ne"),
+
+    /* HodnotaPodleDne: svátek = 10, jinak podle dne v týdnu */
+    "HodnotaPodleDne",
+        VAR w = WEEKDAY([Date], 2)   -- 1=Po ... 7=Ne
+        VAR Y2 = YEAR([Date])
+        /* znovu spočítat svátky jako lokální proměnnou */
+        VAR a2 = MOD(Y2, 19)
+        VAR b2 = QUOTIENT(Y2, 100)
+        VAR c2 = MOD(Y2, 100)
+        VAR d2 = QUOTIENT(b2, 4)
+        VAR e2 = MOD(b2, 4)
+        VAR f2 = QUOTIENT(b2 + 8, 25)
+        VAR g2 = QUOTIENT(b2 - f2 + 1, 3)
+        VAR h2 = MOD(19 * a2 + b2 - d2 - g2 + 15, 30)
+        VAR i2 = QUOTIENT(c2, 4)
+        VAR k2 = MOD(c2, 4)
+        VAR L2 = MOD(32 + 2*e2 + 2*i2 - h2 - k2, 7)
+        VAR m2 = QUOTIENT(a2 + 11*h2 + 22*L2, 451)
+        VAR EasterMonth2 = QUOTIENT(h2 + L2 - 7*m2 + 114, 31)
+        VAR EasterDay2 = MOD(h2 + L2 - 7*m2 + 114, 31) + 1
+        VAR Easter2 = DATE(Y2, EasterMonth2, EasterDay2)
+        VAR GoodFriday2 = Easter2 - 2
+        VAR EasterMonday2 = Easter2 + 1
+        VAR IsFixedHoliday2 =
+            (MONTH([Date]) = 1  && DAY([Date]) = 1 )  ||
+            (MONTH([Date]) = 5  && DAY([Date]) = 1 )  ||
+            (MONTH([Date]) = 5  && DAY([Date]) = 8 )  ||
+            (MONTH([Date]) = 7  && DAY([Date]) = 5 )  ||
+            (MONTH([Date]) = 7  && DAY([Date]) = 6 )  ||
+            (MONTH([Date]) = 9  && DAY([Date]) = 28)  ||
+            (MONTH([Date]) = 10 && DAY([Date]) = 28)  ||
+            (MONTH([Date]) = 11 && DAY([Date]) = 17)  ||
+            (MONTH([Date]) = 12 && DAY([Date]) = 24)  ||
+            (MONTH([Date]) = 12 && DAY([Date]) = 25)  ||
+            (MONTH([Date]) = 12 && DAY([Date]) = 26)
+        VAR IsHoliday2 = IsFixedHoliday2 || [Date] = GoodFriday2 || [Date] = EasterMonday2
+        RETURN
+            IF(
+                IsHoliday2,
+                10,  -- svátek = 10
+                SWITCH(
+                    TRUE(),
+                    w = 1, 30,   -- pondělí
+                    w = 2, 35,   -- úterý
+                    w = 3, 40,   -- středa
+                    w = 4, 45,   -- čtvrtek
+                    w = 5, 50,   -- pátek
+                    w = 6, 5,    -- sobota
+                    w = 7, 10,   -- neděle
+                    BLANK()
+                )
+            )
 )
